@@ -1,4 +1,4 @@
 Nurikabe
 ========
 
-Solve Nurikabes, and learn Haskell
+Solve Nurikabes (http://www.puzzle-nurikabe.com/), and learn Haskell. 
