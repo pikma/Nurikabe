@@ -106,7 +106,7 @@ testParseState = TestCase $ assertEqual
   (Right $ (emptyState 5)
     !+! ((2, 1), 3) !+! ((2, 3), 3) !+!  ((5, 1), 2) !+! ((5, 3), 4))
   (parseState
-   "5\n\n-----\n # a comment\nt 3\n\n\n2 4 #some comment\n-----")
+   "5\n\n-----\n # a comment\n3 3\n\n\n2 4 #some comment\n-----")
 
 tests = [
   TestList [

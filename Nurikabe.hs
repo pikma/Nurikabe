@@ -111,17 +111,18 @@ parseState contents =
 --------------------------------------------------------------------------------
 -- Game validity.
 --
---  State is invalid if:
---   * a white area with a number is bigger than its number: done
---   * a white area has two numbers: done
---   * a non-black area with a number is smaller than its max number: done
---   * a connected non-white area, doesn't contain all blacks
---   * a square of black cells
+--  As we progress in the game, a cell can either be White, Black, or Unknown. A
+--  cell with a Number is considered White. We define a set of properties such
+--  that:
+--    The final state reached after moves m1, ... m_n is invalid iff. there
+--    exists a move m_i after which one of those properties is true.
 --
--- Case that are okay, because the state is not complete yet:
---   * a white area has no number
---   * a non black area has no number
---   * a non black area has two numbers
+--  Here are those properties:
+--   * a connected white area has two numbers;
+--   * a connected white area with a number n has more than n cells;
+--   * a connected non-black area with a number n has less than n cells;
+--   * there is a square of 4 black cells;
+--   * there are more than one connected non-white areas that contains a black.
 
 type Area = [CellPosition]
 type AreaStopFn = [CellPosition] -> Bool
@@ -153,31 +154,30 @@ areaGrowMax stopFn gs cellFn area =
 -- the given CellPosition. At each step, if the current area verifies the
 -- AreaStopFn predicate, stops and returns Nothing.
 area :: AreaStopFn -> GameState -> KeepCellFn -> CellPosition -> Maybe Area
-area stopFn gs cellFn p =
-  areaGrowMax stopFn gs cellFn [p]
+area stopFn gs cellFn p = areaGrowMax stopFn gs cellFn [p]
 
--- Return True if a connected white area contains more than 1 number, or more
--- cells than the island's number.
-hasTwoNumbersInIsland :: GameState -> Bool
-hasTwoNumbersInIsland gs =
+-- Return True if either:
+--   * a connected white area has two numbers;
+--   * a connected white area with a number n has more than n cells;
+invalidConnectedWhite :: GameState -> Bool
+invalidConnectedWhite gs =
   let hasTwoNumbers area =
         (>= 2) $ length $ filter (\p -> Map.member p $ cellNumbers gs) area
-      areaStopFn x = let (Just x_num) = Map.lookup x (cellNumbers gs) in
-          (||) <$> hasTwoNumbers <*> ((> x_num) . length)
-  -- Take as parameter the list of positions that have a Number.
+      -- Take as parameter the list of positions that have a Number.
       aux numbers = case numbers of
         []     -> False
         (x:xs) ->
-          let xArea' = area (areaStopFn x) gs (== Just White) x in
+          let (Just x_num) = Map.lookup x (cellNumbers gs)
+              xArea' = area
+                  ((||) <$> hasTwoNumbers <*> ((> x_num) . length))
+                  gs (== Just White) x in
             case xArea' of
               Nothing    -> True
-              -- No need to remove the area from xs, since it doesn't contain
-              -- any Number cell.
               Just xArea -> aux xs in
-     aux (Map.keys $ cellNumbers gs)
+  aux (Map.keys $ cellNumbers gs)
 
--- Return True if a connected area of non-black cells that contains a Number has
--- a size lower than this number.
+-- Return True if a connected non-black area with a number n has less than n
+-- cells.
 hasTooSmallIsland :: GameState -> Bool
 hasTooSmallIsland gs =
   -- Take as parameter the list of positions that have a Number.
