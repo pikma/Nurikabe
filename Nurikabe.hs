@@ -18,25 +18,31 @@ data GameState = GameState {
   cells :: Map.Map CellPosition CellState
 } deriving (Show, Eq)
 
+emptyState :: Int -> GameState
+emptyState n = GameState {
+  boardSize = n, cellNumbers = Map.empty, cells = Map.empty }
+
 applyMove :: GameState -> Move -> GameState
 applyMove gs (p, s) = GameState {
   boardSize = boardSize gs,
   cellNumbers = cellNumbers gs,
   cells = Map.insert p s (cells gs)}
 
+-- Diagonal are not neighbors
+cellNeighbors :: GameState -> CellPosition -> [CellPosition]
+cellNeighbors gs (x, y) =
+  filter (isValidPos gs)
+    [(x + fst d, y + snd d) | d <- [(0, 1), (1, 0), (0, -1), (-1, 0)]]
+
+isValidPos :: GameState -> CellPosition -> Bool
+isValidPos gs (x, y) = (x >= 1 && x <= boardSize gs &&
+                        y >= 1 && y <= boardSize gs)
+
 -- Returns True if the cell's state is known in the GameState. By default the
 -- state of a cell which has a Number is unknown, assigning its state to White
 -- must be done manually.
 isKnownCell :: GameState -> CellPosition -> Bool
 isKnownCell gs pos = Map.member pos (cells gs)
-
-cellNeighbors :: GameState -> CellPosition -> [CellPosition]
-cellNeighbors gs (x, y) =
-  filter (isValidPos gs) [(x+dx, y+dy) | dx <- [-1, 1], dy <- [-1, 1]]
-
-isValidPos :: GameState -> CellPosition -> Bool
-isValidPos gs (x, y) = (x >= 1 && x <= boardSize gs &&
-                        y >= 1 && y <= boardSize gs)
 
 numUnknownNeighbors :: GameState -> CellPosition -> Int
 numUnknownNeighbors gs p =
@@ -57,18 +63,18 @@ mostConstrainedCell gs =
     otherwise -> Just $ argMinWithBound (numUnknownNeighbors gs) 0 unknownCells
 
 -- Return an element of the list which minimizes the function, or for which the
--- value of the function is equal to the bound given in second argument.
-argMinWithBound :: (Ord b) => (a -> b) -> b -> [a] -> a
+-- value of the function is no greater to the bound given in second argument.
+argMinWithBound :: (Ord b, Bounded b) => (a -> b) -> b -> [a] -> a
 argMinWithBound f bound [] = error "List parameter shouldn't be empty"
-argMinWithBound f bound (x:xs) =
-  let aux f bound l current_arg current_min =
-        case l of
-          []     -> current_arg
-          (x:xs) -> if f x == bound then x
-                    else if f x < current_min then aux f bound xs x (f x)
-                    else aux f bound xs current_arg current_min in
-     if f x == bound then x
-     else aux f bound xs x (f x)
+argMinWithBound f bound l@(x:xs) =
+  let aux ll current_arg_min current_min =
+        case ll of
+          []     -> current_arg_min
+          (x:xs) -> let val = f x in
+                      if val <= bound then x
+                      else if val < current_min then aux xs x (val)
+                      else aux xs current_arg_min current_min in
+     aux l x maxBound
 
 --------------------------------------------------------------------------------
 -- Game validity.

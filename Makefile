@@ -6,7 +6,7 @@ test: Nurikabe_Test
 %.o: %.hs
 	ghc -c $<
 
-Nurikabe_Test: Nurikabe_Test.hs
+Nurikabe_Test: Nurikabe_Test.hs Nurikabe.hs
 	ghc $< -o Nurikabe_Test
 
 clean:
