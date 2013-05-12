@@ -96,18 +96,29 @@ testArgMinWithBound = TestCase $ do
              show (take 10 $ map negate l))
          (-n) (argMinWithBound negate b (map negate l))
   aux 2 3 ([5, 2] ++ [6 ..])
-  aux 2 3 ([5, 2] ++ [6 ..])
   aux 3 3 ([5, 3] ++ [6 ..])
   aux 4 3 ([5, 4] ++ enumFromTo 6 19)
 
+(!+!) = addNumber
+
+testParseState = TestCase $ assertEqual
+  "ParseState"
+  (Right $ (emptyState 5)
+    !+! ((2, 1), 3) !+! ((2, 3), 3) !+!  ((5, 1), 2) !+! ((5, 3), 4))
+  (parseState
+   "5\n\n-----\n # a comment\nt 3\n\n\n2 4 #some comment\n-----")
+
 tests = [
-  TestList [testIsValidOutside, testIsValidInside],
-  testAllPositions,
-  testIsKnownCell,
-  testCellNeighbors,
-  testNumUnknownNeighbors,
-  testMostConstrainedCell,
-  testArgMinWithBound
-    ]
+  TestList [
+    TestList [testIsValidOutside, testIsValidInside],
+    testAllPositions,
+    testIsKnownCell,
+    testCellNeighbors,
+    testNumUnknownNeighbors,
+    testMostConstrainedCell,
+    testArgMinWithBound
+    ],
+  testParseState
+  ]
 
 main = runTestTT $ TestList tests

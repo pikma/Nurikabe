@@ -1,8 +1,9 @@
 module Nurikabe where
 
-import Data.Maybe
-import Data.List
 import Control.Applicative
+import qualified Data.Foldable as Foldable
+import Data.List
+import Data.Maybe
 import qualified Data.Map as Map
 
 data CellState = Black | White deriving (Eq, Show)
@@ -75,6 +76,37 @@ argMinWithBound f bound l@(x:xs) =
                       else if val < current_min then aux xs x (val)
                       else aux xs current_arg_min current_min in
      aux l x maxBound
+
+--------------------------------------------------------------------------------
+-- Game parsing and outputting
+foldrMWithIndex :: (Monad m) => (Int -> a -> b -> m b) -> b -> [a] -> m b
+foldrMWithIndex f init l =
+  let g (i, aa) = f i aa in Foldable.foldrM g init (zip [1..] l)
+
+addNumber :: GameState -> (CellPosition, Int) -> GameState
+addNumber gs (p, n) =
+  GameState {
+    boardSize = boardSize gs,
+    cellNumbers = Map.insert p n (cellNumbers gs),
+    cells = Map.insert p White (cells gs) }
+
+maybeRead :: Read a => String -> Maybe a
+maybeRead s = case reads s of
+    [(x, "")] -> Just x
+    _         -> Nothing
+
+parseState :: String -> Either String GameState
+parseState contents =
+  let first:rest = map (takeWhile (/= '#')) $ lines contents
+      n = read first :: Int
+      board_lines = take n $ tail $ dropWhile (/= (replicate n '-')) rest
+      aux i j c gs =
+        if c == ' ' then Right gs else
+        case maybeRead [c] of
+          Nothing -> Left ("Can't parse number '" ++ c:"'")
+          Just number -> let p = (i,j) in Right $ addNumber gs (p, number)
+      aux' i line gs = foldrMWithIndex (aux i) gs line in
+  foldrMWithIndex aux' (emptyState n) board_lines
 
 --------------------------------------------------------------------------------
 -- Game validity.

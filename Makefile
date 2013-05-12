@@ -1,13 +1,7 @@
 all: test
 
-test: Nurikabe_Test
-	./Nurikabe_Test
-
-%.o: %.hs
-	ghc -c $<
-
-Nurikabe_Test: Nurikabe_Test.hs Nurikabe.hs
-	ghc $< -o Nurikabe_Test
+test: Nurikabe_Test.hs Nurikabe.hs
+	runhaskell Nurikabe_Test.hs
 
 clean:
 	rm -f *.hi *.ho *.o Nurikabe_Test
