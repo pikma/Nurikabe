@@ -131,12 +131,12 @@ type KeepCellFn = (Maybe CellState -> Bool)
 -- Grows one step, returns Nothing if stopFn is true after growth. The returned
 -- list is sorted and doesn't contain duplicates.
 areaGrowOneStep :: AreaStopFn -> GameState -> KeepCellFn -> Area -> Maybe Area
-areaGrowOneStep stopFn gs cellFn [] = error "List parameter shouldn't be empty"
+areaGrowOneStep stopFn gs cellFn [] = Just []
 areaGrowOneStep stopFn gs cellFn area =
   let newArea = area >>= (\p' -> p':(cellNeighbors gs p'))
       filtered = filter (\p' -> cellFn $ Map.lookup p' $ cells gs) newArea
       sorted = nub $ sort filtered in
-    if stopFn newArea then Nothing else Just sorted
+    if stopFn sorted then Nothing else Just sorted
 
 -- Grows until either stopFn is true or growing doesn't change the area
 -- anymore. The returned list is sorted and doesn't contain duplicates. Returns

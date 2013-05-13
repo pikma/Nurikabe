@@ -1,6 +1,7 @@
 module Main where
 
 import Data.List
+import Data.Maybe
 import Nurikabe
 import Test.HUnit
 import qualified Data.Map as Map
@@ -36,10 +37,10 @@ testIsValidInside = TestCase $ do
   assertValid True (1, 3)
   assertValid True (3, 3)
 
-assertSortedEqual :: (Ord a, Show a) => String -> [a] -> [a] -> Assertion
-assertSortedEqual s l1 l2 = assertEqual s (sort l1) (sort l2)
+assertEqualAfter :: (Eq b, Show b) => (a -> b) -> String -> a -> a -> Assertion
+assertEqualAfter f s a1 a2 = assertEqual s (f a1) (f a2)
 
-testAllPositions = TestCase $ assertSortedEqual
+testAllPositions = TestCase $ assertEqualAfter sort
   "allPositions returned incorrect results"
   [(1,1), (1,2), (1,3), (2,1), (2,2), (2,3), (3,1), (3,2), (3,3)]
   (allPositions simpleBoard)
@@ -57,7 +58,7 @@ testIsKnownCell = TestCase $ do
     "IsKnownCell" False (isKnownCell oneCellKnown (2, 2))
 
 testCellNeighbors = TestCase $ do
-  assertSortedEqual "cellNeighbors"
+  assertEqualAfter sort "cellNeighbors"
     [(1, 2), (2, 1)] (cellNeighbors simpleBoard (1, 1))
 
 testNumUnknownNeighbors = TestCase $ do
@@ -108,6 +109,45 @@ testParseState = TestCase $ assertEqual
   (parseState
    "5\n\n-----\n # a comment\n3 3\n\n\n2 4 #some comment\n-----")
 
+testArea = TestCase $ do
+  let gs = ((emptyState 3) !!!
+       ((2, 1), Black) !!! ((2, 3), Black) !!! ((3, 2), Black))
+  assertEqualAfter (fmap sort)
+    "Area"
+    (Just [(1, 1), (1, 2), (2, 2), (1, 3)])
+    (area (\_ -> False) gs (/= Just Black) (1, 1))
+  assertEqualAfter (fmap sort)
+    "Area"
+    (Just [])
+    (area (\_ -> False) gs (== Just White) (1, 1))
+  assertEqualAfter (fmap sort)
+    "Area"
+    (Just (allPositions gs))
+    (area (\_ -> False) gs (/= Just White) (1, 1))
+  assertEqual
+    "Area"
+    Nothing
+    (area ((> 4) . length) gs (/= Just White) (1, 1))
+  assertEqualAfter (fmap sort)
+    "Area"
+    (Just (allPositions gs))
+    (area ((> 9) . length) gs (/= Just White) (1, 1))
+
+testTwoNumbersIsland = TestCase $ do
+  let gs = (emptyState 3) !+!  ((2, 1), 3) !+! ((2, 3), 3)
+  assertEqual
+    "Island with two numbers"
+    False
+    (invalidConnectedWhite gs)
+  assertEqual
+    "Island with two numbers"
+    True
+    (invalidConnectedWhite $ gs !!! ((2, 2), White))
+  assertEqual
+    "Island with two numbers"
+    True
+    (invalidConnectedWhite $ gs !+! ((2, 2), 6))
+
 tests = [
   TestList [
     TestList [testIsValidOutside, testIsValidInside],
@@ -118,7 +158,9 @@ tests = [
     testMostConstrainedCell,
     testArgMinWithBound
     ],
-  testParseState
+  testParseState,
+  testArea,
+  testTwoNumbersIsland
   ]
 
 main = runTestTT $ TestList tests
