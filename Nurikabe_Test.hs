@@ -149,20 +149,26 @@ testTwoNumbersIsland = TestCase $ do
     (invalidConnectedWhite $ gs !+! ((2, 2), 6))
 
 testHasTooSmallIsland = TestCase $ do
-  let assertEqual' = assertEqual "Island too small"
-  assertEqual' False $ hasTooSmallIsland (emptyState 3)
-  assertEqual' False $ hasTooSmallIsland ((emptyState 3) !+! ((1, 1), 4))
-  assertEqual' False $ hasTooSmallIsland ((emptyState 3) !+! ((1, 1), 9))
-  assertEqual' True $ hasTooSmallIsland ((emptyState 3) !+! ((1, 1), 10))
+  let assertEqual' b gs =
+       assertEqual "Island too small" b $ hasTooSmallIsland gs
+  assertEqual' False (emptyState 3)
+  assertEqual' False ((emptyState 3) !+! ((1, 1), 4))
+  assertEqual' False ((emptyState 3) !+! ((1, 1), 9))
+  assertEqual' True ((emptyState 3) !+! ((1, 1), 10))
   let gs n = (emptyState 3) !+! ((2, 1), n) !!!
        ((1, 2), Black) !!!  ((2, 2), Black) !!! ((3, 2), Black)
-  assertEqual' False $ hasTooSmallIsland $ gs 3
-  assertEqual' True $ hasTooSmallIsland $ gs 4
+  assertEqual' False $ gs 3
+  assertEqual' True $ gs 4
+  let gs' n = (emptyState 3) !+! ((2, 1), n) !!!
+       ((1, 1), Black) !!! ((2, 2), Black) !!! ((3, 2), Black)
+  mapM_ (\n -> assertEqual' False $ gs' n) [1..2]
+  mapM_ (\n -> assertEqual' True $ gs' n) [3..9]
 
 testHasNonConnectedRivers = TestCase $ do
   let assertEqual' b gs =
        assertEqual "Connected Rivers" b $ hasNonConnectedRivers gs
   assertEqual' False (emptyState 3)
+
 
 tests = [
   TestList [
