@@ -39,7 +39,7 @@ isValidPos :: GameState -> CellPosition -> Bool
 isValidPos gs (x, y) = (x >= 1 && x <= boardSize gs &&
                         y >= 1 && y <= boardSize gs)
 
--- Returns True if the cell's state is known in the GameState. By default the
+-- Returnss True if the cell's state is known in the GameState. By default the
 -- state of a cell which has a Number is unknown, assigning its state to White
 -- must be done manually.
 isKnownCell :: GameState -> CellPosition -> Bool
@@ -63,7 +63,7 @@ mostConstrainedCell gs =
     []        -> Nothing
     otherwise -> Just $ argMinWithBound (numUnknownNeighbors gs) 0 unknownCells
 
--- Return an element of the list which minimizes the function, or for which the
+-- Returns an element of the list which minimizes the function, or for which the
 -- value of the function is no greater to the bound given in second argument.
 argMinWithBound :: (Ord b, Bounded b) => (a -> b) -> b -> [a] -> a
 argMinWithBound f bound [] = error "List parameter shouldn't be empty"
@@ -156,7 +156,7 @@ areaGrowMax stopFn gs cellFn area =
 area :: AreaStopFn -> GameState -> KeepCellFn -> CellPosition -> Maybe Area
 area stopFn gs cellFn p = areaGrowMax stopFn gs cellFn [p]
 
--- Return True if either:
+-- Returns True if either:
 --   * a connected white area has two numbers;
 --   * a connected white area with a number n has more than n cells;
 invalidConnectedWhite :: GameState -> Bool
@@ -176,7 +176,7 @@ invalidConnectedWhite gs =
               Just xArea -> aux xs in
   aux (Map.keys $ cellNumbers gs)
 
--- Return True if a connected non-black area with a number n has less than n
+-- Returns True if a connected non-black area with a number n has less than n
 -- cells.
 hasTooSmallIsland :: GameState -> Bool
 hasTooSmallIsland gs =
@@ -193,6 +193,7 @@ hasTooSmallIsland gs =
                      else aux (xs \\ xArea) in
       aux (Map.keys $ cellNumbers gs)
 
+-- Returns True if there is more than one connected non-white area.
 hasNonConnectedRivers :: GameState -> Bool
 hasNonConnectedRivers gs =
   -- Take as parameter the list of positions that are non-white.
