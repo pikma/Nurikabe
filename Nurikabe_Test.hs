@@ -182,6 +182,21 @@ testHasNonConnectedRivers = TestCase $ do
   testOneBoard $ (emptyState 3)
       !!! ((1, 2), White) !!! ((2, 2), White) !!! ((3, 3), White)
 
+testHasBlackSquare = TestCase $ do
+  let assertEqual' b gs =
+       assertEqual "Connected Rivers" b $ hasBlackSquare gs
+  assertEqual' False $ emptyState 3
+  assertEqual' False $ emptyState 3 !!! ((2, 2), Black)
+  assertEqual' False $ emptyState 3 !!! ((2, 2), Black) !!! ((2, 3), Black)
+  assertEqual' False $ emptyState 3
+      !!! ((2, 2), Black) !!! ((2, 3), Black) !!! ((3, 2), Black)
+  assertEqual' False $ emptyState 3 !!! ((2, 2), Black)
+      !!! ((2, 3), Black) !!! ((3, 2), Black) !!! ((3, 3), White)
+  assertEqual' False $ emptyState 3 !!! ((2, 2), Black)
+      !!! ((2, 3), Black) !!! ((3, 2), Black) !+! ((3, 3), 7)
+  assertEqual' True $ emptyState 3 !!! ((2, 2), Black)
+      !!! ((2, 3), Black) !!! ((3, 2), Black) !!! ((3, 3), Black)
+
 tests = [
   TestList [
     TestList [testIsValidOutside, testIsValidInside],
@@ -199,4 +214,3 @@ tests = [
   testHasNonConnectedRivers
   ]
 
-main = runTestTT $ TestList tests

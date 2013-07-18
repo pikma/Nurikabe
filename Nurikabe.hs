@@ -217,5 +217,5 @@ hasBlackSquare gs =
 
 isFinished :: GameState -> Bool
 isFinished gs =
-  any (\p -> (== Nothing) $ Map.lookup p $ cells gs) (allPositions gs)
+  any (\p -> (Map.lookup p $ cells gs) == Nothing) (allPositions gs)
 
