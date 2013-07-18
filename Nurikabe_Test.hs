@@ -6,13 +6,13 @@ import Nurikabe
 import Test.HUnit
 import qualified Data.Map as Map
 
-simpleBoard = emptyState 3
+board3 = emptyState 3
 
 assertValid :: Bool -> CellPosition -> Assertion
 assertValid b p = assertEqual
   ("Cell " ++ (show p) ++ " should " ++
     (if b then "" else "not ") ++ "be valid")
-  b (isValidPos simpleBoard p)
+  b (isValidPos board3 p)
 
 testIsValidOutside = TestCase $ do
   assertValid False (0, 1)
@@ -43,15 +43,15 @@ assertEqualAfter f s a1 a2 = assertEqual s (f a1) (f a2)
 testAllPositions = TestCase $ assertEqualAfter sort
   "allPositions returned incorrect results"
   [(1,1), (1,2), (1,3), (2,1), (2,2), (2,3), (3,1), (3,2), (3,3)]
-  (allPositions simpleBoard)
+  (allPositions board3)
 
 oneCellKnown :: GameState
-oneCellKnown = simpleBoard `applyMove` ((1, 2), Black)
+oneCellKnown = board3 `applyMove` ((1, 2), Black)
 
 testIsKnownCell = TestCase $ do
   assertEqual
     "IsKnownCell"
-    False (isKnownCell simpleBoard (1,1))
+    False (isKnownCell board3 (1,1))
   assertEqual
     "IsKnownCell" True (isKnownCell oneCellKnown (1, 2))
   assertEqual
@@ -59,17 +59,17 @@ testIsKnownCell = TestCase $ do
 
 testCellNeighbors = TestCase $ do
   assertEqualAfter sort "cellNeighbors"
-    [(1, 2), (2, 1)] (cellNeighbors simpleBoard (1, 1))
+    [(1, 2), (2, 1)] (cellNeighbors board3 (1, 1))
 
 testNumUnknownNeighbors = TestCase $ do
-  assertEqual "numUnknownNeighbors" 2 (numUnknownNeighbors simpleBoard (1, 1))
-  assertEqual "numUnknownNeighbors" 3 (numUnknownNeighbors simpleBoard (2, 1))
-  assertEqual "numUnknownNeighbors" 4 (numUnknownNeighbors simpleBoard (2, 2))
+  assertEqual "numUnknownNeighbors" 2 (numUnknownNeighbors board3 (1, 1))
+  assertEqual "numUnknownNeighbors" 3 (numUnknownNeighbors board3 (2, 1))
+  assertEqual "numUnknownNeighbors" 4 (numUnknownNeighbors board3 (2, 2))
 
 (!!!) = applyMove
 
 allCellsKnown :: GameState
-allCellsKnown = simpleBoard
+allCellsKnown = board3
   !!! ((1, 1), Black) !!! ((1, 2), Black) !!! ((1, 3), Black)
   !!! ((2, 1), Black) !!! ((2, 2), Black) !!! ((2, 3), Black)
   !!! ((3, 1), Black) !!! ((3, 2), Black) !!! ((3, 3), Black)
@@ -167,8 +167,20 @@ testHasTooSmallIsland = TestCase $ do
 testHasNonConnectedRivers = TestCase $ do
   let assertEqual' b gs =
        assertEqual "Connected Rivers" b $ hasNonConnectedRivers gs
-  assertEqual' False (emptyState 3)
-
+  assertEqual' False $ emptyState 3
+  assertEqual' False $ (emptyState 3) !!! ((1, 2), White) !!! ((2, 2), White)
+  assertEqual' False $ (emptyState 3)
+      !!! ((1, 1), White) !!! ((1, 2), White) !!! ((1, 3), White)
+  let testOneBoard gs = do
+       assertEqual' False gs
+       assertEqual' False $ gs !!! ((1, 1), Black)
+       assertEqual' True $ gs !!! ((1, 1), Black) !!! ((1, 3), Black)
+  testOneBoard $ (emptyState 3)
+      !!! ((1, 2), White) !!! ((2, 2), White) !!! ((3, 2), White)
+  testOneBoard $ (emptyState 3)
+      !!! ((1, 2), White) !!! ((2, 2), White) !!! ((2, 3), White)
+  testOneBoard $ (emptyState 3)
+      !!! ((1, 2), White) !!! ((2, 2), White) !!! ((3, 3), White)
 
 tests = [
   TestList [

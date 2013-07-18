@@ -193,11 +193,13 @@ hasTooSmallIsland gs =
                      else aux (xs \\ xArea) in
       aux (Map.keys $ cellNumbers gs)
 
--- Returns True if there is more than one connected non-white area.
+-- Returns True if there is more than one connected non-white area that contains
+-- a black (if it doesn't contain a black, it's okay as it could become all
+-- white).
 hasNonConnectedRivers :: GameState -> Bool
 hasNonConnectedRivers gs =
   -- Take as parameter the list of positions that are non-white.
-  let aux nonWhite = case nonWhite of
+  let aux blacks = case blacks of
         []     -> False
         (x:xs) ->
           let (Just xArea) = area (\_ -> False) gs (/= Just White) x in
