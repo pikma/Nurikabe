@@ -102,13 +102,6 @@ testArgMinWithBound = TestCase $ do
 
 (!+!) = addNumber
 
-testParseState = TestCase $ assertEqual
-  "ParseState"
-  (Right $ (emptyState 5)
-    !+! ((2, 1), 3) !+! ((2, 3), 3) !+!  ((5, 1), 2) !+! ((5, 3), 4))
-  (parseState
-   "5\n\n-----\n # a comment\n3 3\n\n\n2 4 #some comment\n-----")
-
 testArea = TestCase $ do
   let gs = ((emptyState 3) !!!
        ((2, 1), Black) !!! ((2, 3), Black) !!! ((3, 2), Black))
@@ -197,7 +190,13 @@ testHasBlackSquare = TestCase $ do
   assertEqual' True $ emptyState 3 !!! ((2, 2), Black)
       !!! ((2, 3), Black) !!! ((3, 2), Black) !!! ((3, 3), Black)
 
-tests = [
+testSplitOn = TestCase $ do
+  assertEqual "splitOn1" ["foo", "bar", "baz"] $ splitOn ',' ",foo,bar,,baz,,,"
+  assertEqual "splitOn2" ["foo", "bar", "baz"] $ splitOn ',' "foo,bar,baz"
+  assertEqual "splitOn3" ["foobarbaz"]         $ splitOn ',' "foobarbaz"
+  assertEqual "splitOn4" []                  $ splitOn ',' ""
+
+tests = test [
   TestList [
     TestList [testIsValidOutside, testIsValidInside],
     testAllPositions,
@@ -207,10 +206,11 @@ tests = [
     testMostConstrainedCell,
     testArgMinWithBound
     ],
-  testParseState,
   testArea,
   testTwoNumbersIsland,
   testHasTooSmallIsland,
-  testHasNonConnectedRivers
+  testHasNonConnectedRivers,
+  testSplitOn
   ]
 
+main = runTestTT tests
