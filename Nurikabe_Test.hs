@@ -5,6 +5,7 @@ import Data.Maybe
 import Nurikabe
 import Test.HUnit
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 board3 = emptyState 3
 
@@ -105,26 +106,26 @@ testArgMinWithBound = TestCase $ do
 testArea = TestCase $ do
   let gs = ((emptyState 3) !!!
        ((2, 1), Black) !!! ((2, 3), Black) !!! ((3, 2), Black))
-  assertEqualAfter (fmap sort)
+  assertEqual
     "Area"
-    (Just [(1, 1), (1, 2), (2, 2), (1, 3)])
+    (Just $ Set.fromList [(1, 1), (1, 2), (2, 2), (1, 3)])
     (area (\_ -> False) gs (/= Just Black) (1, 1))
-  assertEqualAfter (fmap sort)
+  assertEqual
     "Area"
-    (Just [])
+    (Just $ Set.empty)
     (area (\_ -> False) gs (== Just White) (1, 1))
-  assertEqualAfter (fmap sort)
+  assertEqual
     "Area"
-    (Just (allPositions gs))
+    (Just $ Set.fromList (allPositions gs))
     (area (\_ -> False) gs (/= Just White) (1, 1))
   assertEqual
     "Area"
     Nothing
-    (area ((> 4) . length) gs (/= Just White) (1, 1))
-  assertEqualAfter (fmap sort)
+    (area ((> 4) . Set.size) gs (/= Just White) (1, 1))
+  assertEqual
     "Area"
-    (Just (allPositions gs))
-    (area ((> 9) . length) gs (/= Just White) (1, 1))
+    (Just $ Set.fromList (allPositions gs))
+    (area ((> 9) . Set.size) gs (/= Just White) (1, 1))
 
 testTwoNumbersIsland = TestCase $ do
   let gs = (emptyState 3) !+!  ((2, 1), 3) !+! ((2, 3), 3)

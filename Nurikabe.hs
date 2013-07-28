@@ -5,6 +5,7 @@ import Data.List
 import Data.Maybe
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 data CellState = Black | White deriving (Eq, Show)
 
@@ -107,19 +108,19 @@ argMinWithBound f bound l@(x:xs) =
 --   * there is a square of 4 black cells;
 --   * there are more than one connected non-white areas that contains a black.
 
-type Area = [CellPosition]
-type AreaStopFn = [CellPosition] -> Bool
+type Area = Set.Set CellPosition
+type AreaStopFn = Area -> Bool
 type KeepCellFn = (Maybe CellState -> Bool)
 
 -- Grows one step, returns Nothing if stopFn is true after growth. The returned
 -- list is sorted and doesn't contain duplicates.
 areaGrowOneStep :: AreaStopFn -> GameState -> KeepCellFn -> Area -> Maybe Area
-areaGrowOneStep stopFn gs cellFn [] = Just []
 areaGrowOneStep stopFn gs cellFn area =
-  let newArea = area >>= (\p' -> p':(cellNeighbors gs p'))
-      filtered = filter (\p' -> cellFn $ Map.lookup p' $ cells gs) newArea
-      sorted = nub $ sort filtered in
-    if stopFn sorted then Nothing else Just sorted
+  let addNeighbors set p = Set.union set (Set.fromList $ cellNeighbors gs p) in
+  let newArea = Set.foldl addNeighbors area area in
+  let filtered =
+       Set.filter (\p' -> cellFn $ Map.lookup p' $ cells gs) newArea in
+         if stopFn filtered then Nothing else Just filtered
 
 -- Grows until either stopFn is true or growing doesn't change the area
 -- anymore. The returned list is sorted and doesn't contain duplicates. Returns
@@ -137,7 +138,7 @@ areaGrowMax stopFn gs cellFn area =
 -- the given CellPosition. At each step, if the current area verifies the
 -- AreaStopFn predicate, stops and returns Nothing.
 area :: AreaStopFn -> GameState -> KeepCellFn -> CellPosition -> Maybe Area
-area stopFn gs cellFn p = areaGrowMax stopFn gs cellFn [p]
+area stopFn gs cellFn p = areaGrowMax stopFn gs cellFn (Set.singleton p)
 
 -- Returns True if either:
 --   * a connected white area has two numbers;
@@ -145,14 +146,14 @@ area stopFn gs cellFn p = areaGrowMax stopFn gs cellFn [p]
 invalidConnectedWhite :: GameState -> Bool
 invalidConnectedWhite gs =
   let hasTwoNumbers area =
-        (>= 2) $ length $ filter (\p -> Map.member p $ cellNumbers gs) area
+        (>= 2) $ Set.size $ Set.filter (\p -> Map.member p $ cellNumbers gs) area
       -- Take as parameter the list of positions that have a Number.
       aux numbers = case numbers of
         []     -> False
         (x:xs) ->
           let (Just x_num) = Map.lookup x (cellNumbers gs)
               xArea' = area
-                  ((||) <$> hasTwoNumbers <*> ((> x_num) . length))
+                  ((||) <$> hasTwoNumbers <*> ((> x_num) . Set.size))
                   gs (== Just White) x in
             case xArea' of
               Nothing    -> True
@@ -167,13 +168,10 @@ hasTooSmallIsland gs =
   let aux numbers = case numbers of
         []     -> False
         (x:xs) ->
-          let xArea' = area (\_ -> False) gs (/= Just Black) x in
-            case xArea' of
-              Nothing -> True
-              Just xArea ->
-                let (Just islandNumber) = Map.lookup x (cellNumbers gs) in
-                     if length xArea < islandNumber then True
-                     else aux (xs \\ xArea) in
+          let Just xArea = area (\_ -> False) gs (/= Just Black) x in
+          let (Just islandNumber) = Map.lookup x (cellNumbers gs) in
+               if Set.size xArea < islandNumber then True
+               else aux (xs \\ Set.toList xArea) in
       aux (Map.keys $ cellNumbers gs)
 
 -- Returns True if there is more than one connected non-white area that contains
@@ -186,7 +184,7 @@ hasNonConnectedRivers gs =
         []     -> False
         (x:xs) ->
           let (Just xArea) = area (\_ -> False) gs (/= Just White) x in
-            any (\p -> notElem p xArea) xs in
+            any (\p -> Set.notMember p xArea) xs in
     aux $ Map.keys $ Map.filter (== Black) $ cells gs
 
 hasBlackSquare :: GameState -> Bool
