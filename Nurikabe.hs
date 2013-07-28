@@ -3,6 +3,7 @@ module Nurikabe where
 import Control.Applicative
 import Data.List
 import Data.Maybe
+import Debug.Trace
 import qualified Data.Foldable as Foldable
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -66,17 +67,6 @@ mostConstrainedCell gs =
   case unknownCells of
     []        -> Nothing
     otherwise -> Just $ argMinWithBound (numUnknownNeighbors gs) 0 unknownCells
-
--- Returns a position for which there is only one possible choice if it exists,
--- otherwise returns the most constrained cell.
-leastBranchingCell :: GameState -> Maybe CellPosition
-leastBranchingCell gs =
-  let candidateCells = filter (not . (isKnownCell gs)) (allPositions gs) in
-  let candidateMoves = (,) <$> candidateCells <*> [White, Black] in
-  let isInvalidMove m = not . isLegal $ applyMove gs m in
-  case find isInvalidMove candidateMoves of
-    Nothing -> mostConstrainedCell gs
-    Just (p, _) -> Just p
 
 -- Returns an element of the list which minimizes the function, or for which the
 -- value of the function is no greater to the bound given in second argument.
@@ -282,15 +272,55 @@ printState gs =
 --------------------------------------------------------------------------------
 -- Finding a solution.
 
-solve :: GameState -> Maybe GameState
-solve gs = if not (isLegal gs)
-   then Nothing
-   else if isFinished gs then Just gs else
-          case leastBranchingCell gs of
-            Nothing -> Nothing
-            Just p  -> solveStartAtPos gs p
+otherMove :: Move -> Move
+otherMove (p, Black) = (p, White)
+otherMove (p, White) = (p, Black)
 
-solveStartAtPos :: GameState -> CellPosition -> Maybe GameState
-solveStartAtPos gs p = case solve $ applyMove gs (p, White) of
-   Nothing -> solve $ applyMove gs (p, Black)
-   Just solution -> Just solution
+solve :: GameState -> Maybe GameState
+solve gs =
+  let candidateCells = filter (not . (isKnownCell gs)) (allPositions gs) in
+  --  trace ("Reset. Num candidates : " ++ (show $ length candidateCells)) $
+  if null candidateCells then Just gs else
+  case tryCandidates gs candidateCells of
+        Nothing -> Nothing
+        Just gs' -> if gs == gs' then solveWithGuess gs' else solve gs'
+
+unknownNeighbors :: GameState -> [CellPosition] -> [CellPosition]
+unknownNeighbors gs l =
+  let aux l set = case l of
+       [] -> Set.toList set
+       (p:xs) ->
+         let neighbors = filter (not . (isKnownCell gs)) (cellNeighbors gs p) in
+               aux xs (Set.union set $ Set.fromList neighbors) in
+       aux l Set.empty
+
+tryCandidates :: GameState -> [CellPosition] -> Maybe GameState
+tryCandidates gs candidates =
+   --  trace ("Num candidates : " ++ (show $ length candidates)) $
+   if not (isLegal gs) then Nothing
+   else if null candidates then solve gs
+   else
+     let applyMoveIfForced (gs, appliedPos) p =
+          let isWhiteLegal = isLegal $ applyMove gs (p, White) in
+          let isBlackLegal = isLegal $ applyMove gs (p, Black) in
+               if (isWhiteLegal && not isBlackLegal)
+                 then Just (applyMove gs (p, White), p:appliedPos)
+               else if (isBlackLegal && not isWhiteLegal)
+                 then Just (applyMove gs (p, Black), p:appliedPos)
+               else if (not isBlackLegal && not isWhiteLegal)
+                 then Nothing
+               else Just (gs, appliedPos) in
+     case Foldable.foldlM applyMoveIfForced (gs, []) candidates of
+           Nothing -> Nothing
+           Just (gs', applied) ->
+             if null applied then Just gs'
+             else tryCandidates gs' $ unknownNeighbors gs' applied
+
+solveWithGuess :: GameState -> Maybe GameState
+solveWithGuess gs =
+  --  trace "Guess." $
+  case mostConstrainedCell gs of
+     Nothing -> Nothing
+     Just p -> case solve $ applyMove gs (p, White) of
+         Nothing -> solve $ applyMove gs (p, Black)
+         Just solution -> Just solution
