@@ -1,4 +1,5 @@
 #include <map>
+#include <utility>
 #include <vector>
 
 enum Color {
@@ -24,27 +25,66 @@ class Board {
    Board(int width,
          const std::map<std::pair<int, int>, int>& pos_to_numbers);
 
-
  private:
    typedef int Index;
 
    Index GetIndex(int x, int y) const { return x * width_ + y; }
-   Index MaxIndex() const { return width_ * width_; }
+
+   void GetPosition(Index i, int* x, int* y) const;
 
    // When making a move at position p, it makes the states invalid iff it
    // breaks any of the conditions below, depending on its color.
    //
    // White:
-   // 1. Connects two islands with whites.
-   // 2. Make a white island too big.
-   // 3. Isolates a portion of the black river.
+   // 1. Connects two islands with whites.        (ok)
+   // 2. Make a white island too big.             (ok)
+   // 3. Isolates a portion of the black river.   (ok)
    //
    // Black:
    // 1. Makes an island too small.
-   // 2. Creates a black square.
+   // 2. Creates a black square.                  (ok)
 
-   bool HasBlackSquare() const;
+   bool IsInBlackSquare(Index black) const;
+
+   // Returns true if the last cell that became black restricted the size of
+   // some island so that their size is too small.
+   bool IsSomeIslandTooSmall(Index last_black) const;
+
+   bool AreBlackDisconnected() const;
+
+   std::vector<Index> GetNeighbors(Index i) const;
+   std::vector<std::pair<int, int>> GetNeighbors(int x, int y) const;
+
+   void ApplyMove(const Move& move);
+
+   // The cells i and j must be white.
+   void MergeWhites(Index i, Index j);
+
+   // The cell j must be white.
+   Index GetWhiteRepresentative(Index i);
+
+   // Returns the cells reachable from the origin by traversing only cells that
+   // are not of the barrier color.
+   std::vector<bool> ReachableCellsNotColored(
+       Index origin, Color barrier) const;
+
+   // Same as above, but stops as soon as it find max_num_cells reachable cells.
+   std::vector<bool> ReachableCellsNotColoredAtMost(
+       Index origin, Color barrier, int max_num_cells) const;
+
+   // Marks the origin as reachable, and propagates to its neighbors. Returns
+   // the number of cells newly marked as reachable.
+   int MarkAndPropagate(Index origin,
+                        Color barrier,
+                        int max_num_cells,
+                        std::vector<bool>* reachable) const;
+
+   int GetManhattanDistance(Index i, Index j) const;
 
    const int width_;
+   const int num_cells_;
    std::vector<CellState> cells_;
+   std::vector<int> white_parent_;
+   std::vector<int> num_white_children_;
+   bool is_valid_;
 };
