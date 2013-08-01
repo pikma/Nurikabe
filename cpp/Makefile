@@ -10,7 +10,7 @@ DEPS=$(patsubst %.cc,%.d,$(SRCS))
 
 all: main
 
-LDFLAGS=-lglog
+LDFLAGS=-static -lglog -lpthread
 
 main: $(OBJS)
 	$(CC) -o main $^ $(LDFLAGS)

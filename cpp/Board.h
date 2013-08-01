@@ -1,4 +1,6 @@
+#include <iostream>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -24,25 +26,34 @@ class Board {
  public:
    Board(int width,
          const std::map<std::pair<int, int>, int>& pos_to_numbers);
+   Board(Board&&) = default;
+
+   // Fills the board until either the board is full (a solution has been found)
+   // or the state is invalid (there is no solution).
+   void Solve();
+
+   std::string ToString(bool debug = false) const;
+
+   bool IsSolved() const;
 
  private:
    typedef int Index;
 
    Index GetIndex(int x, int y) const { return x * width_ + y; }
-
    void GetPosition(Index i, int* x, int* y) const;
+
 
    // When making a move at position p, it makes the states invalid iff it
    // breaks any of the conditions below, depending on its color.
    //
    // White:
-   // 1. Connects two islands with whites.        (ok)
-   // 2. Make a white island too big.             (ok)
-   // 3. Isolates a portion of the black river.   (ok)
+   // 1. Connects two islands with whites.
+   // 2. Make a white island too big.
+   // 3. Isolates a portion of the black river.
    //
    // Black:
    // 1. Makes an island too small.
-   // 2. Creates a black square.                  (ok)
+   // 2. Creates a black square.
 
    bool IsInBlackSquare(Index black) const;
 
@@ -57,8 +68,10 @@ class Board {
 
    void ApplyMove(const Move& move);
 
-   // The cells i and j must be white.
-   void MergeWhites(Index i, Index j);
+   // Connects two white cells that were not previously connected. Returns
+   // false if that results in an invalid state, i.e. if a white island is now
+   // too big, or now contains two numbers.
+   bool MergeWhites(Index i, Index j);
 
    // The cell j must be white.
    Index GetWhiteRepresentative(Index i);
@@ -81,10 +94,18 @@ class Board {
 
    int GetManhattanDistance(Index i, Index j) const;
 
+   void AddWhiteToWhiteAreas(Index i);
+
    const int width_;
    const int num_cells_;
    std::vector<CellState> cells_;
    std::vector<int> white_parent_;
    std::vector<int> num_white_children_;
    bool is_valid_;
+   int num_unknown_cells_;
+
+   Board(const Board&);
+   const Board& operator=(const Board&);
 };
+
+Board ParseBoardFromStream(std::istream* stream);
