@@ -11,6 +11,9 @@ enum Color {
   UNKNOWN,
 };
 
+// The given color must be white or black.
+Color OppositeColor(Color c);
+
 struct Move {
   int index;
   Color color;
@@ -80,7 +83,14 @@ class Board {
   void ApplyMove(const Move& move);
   void UndoMove(const Move& move);
 
-  void SolveWithoutGuess();
+  // Returns false if there is no solution, in which case the state is
+  // unchanged. Returns true if a solution is found or if one cannot progress
+  // without a guess. In this case, applied_moves is filled with the moves
+  // applied to the state.
+  bool SolveWithoutGuess(std::stack<Move>* applied_moves);
+
+  bool Solve();
+  bool SolveWithGuess(const Move& move);
 
  private:
   // When making a move at position p, it makes the states invalid iff it
@@ -97,6 +107,7 @@ class Board {
   // Both:
   // 1. Isolates a portion of the black river.
 
+  Move GetNextGuessMove() const;
   bool IsInBlackSquare(Index black) const;
 
   // Returns true if the last cell that became black restricted the size of

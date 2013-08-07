@@ -7,6 +7,14 @@
 
 using namespace std;
 
+Color OppositeColor(Color c) {
+  switch (c) {
+    case BLACK:   return WHITE;
+    case WHITE:   return BLACK;
+    case UNKNOWN: LOG(FATAL) << "OppositeColor(UNKNOWN) is undefined.";
+  }
+}
+
 // *****************************************************************************
 // Indexer.
 
@@ -103,6 +111,7 @@ bool IslandSet::MergeWhites(Index i, Index j) {
   undo.white_parent_previous_value = white_parent_[i_repr];
   undo.num_white_children_index = j_repr;
   undo.num_white_children_previous_value = num_white_children_[j_repr];
+  last_edits_.push(undo);
 
   white_parent_[i_repr] = j_repr;
   num_white_children_[j_repr] += num_white_children_[i_repr];
@@ -294,25 +303,91 @@ bool Board::IsMoveValid(const Move& move) const {
   return result;
 }
 
-void Board::SolveWithoutGuess() {
-  int num_applied_moves;
+bool Board::SolveWithoutGuess(stack<Move>* applied_moves) {
+  bool made_progress;
   do {
-    num_applied_moves = 0;
+    made_progress = false;
     for (Index i = 0; i < num_cells_; ++i) {
       if (cells_[i] != UNKNOWN)
         continue;
       if (!is_valid_)
-        return;
-      if (IsMoveValid({i, BLACK})) {
-        if (!IsMoveValid({i, WHITE})) {
-          ApplyMove({i, BLACK});
-          ++num_applied_moves;
+        return false;
+
+      const Move black_move = {i, BLACK};
+      const Move white_move = {i, WHITE};
+      if (IsMoveValid(black_move)) {
+        if (!IsMoveValid(white_move)) {
+          ApplyMove(black_move);
+          applied_moves->push(black_move);
+          made_progress = true;
         }
       } else {
-        ApplyMove({i, WHITE});
-        ++num_applied_moves;
+        ApplyMove(white_move);
+        applied_moves->push(white_move);
+        made_progress = true;
       }
     }
-  } while (num_applied_moves > 0);
+  } while (made_progress);
+  return is_valid_;
+}
+
+bool Board::Solve() {
+  if (!is_valid_)
+    return false;
+
+  stack<Move> applied_moves;
+  SolveWithoutGuess(&applied_moves);
+
+  Move next_move = GetNextGuessMove();
+  if (SolveWithGuess(next_move))
+    return true;
+
+  next_move.color = OppositeColor(next_move.color);
+  if (SolveWithGuess(next_move))
+    return true;
+
+  while (!applied_moves.empty()) {
+    UndoMove(applied_moves.top());
+    applied_moves.pop();
+  }
+  return false;
+}
+
+bool Board::SolveWithGuess(const Move& next_move) {
+  if (!is_valid_)
+    return false;
+
+  ApplyMove(next_move);
+  if (Solve()) {
+    return true;
+  } else {
+    UndoMove(next_move);
+    return false;
+  }
+}
+
+Move Board::GetNextGuessMove() const {
+  int max_num_known_neighbors = -1;
+  int bestIndex = -1;
+  for (Index i = 0; i < num_cells_; ++i) {
+    if (cells_[i] != UNKNOWN)
+      continue;
+
+    int num_known_neighbors = 0;
+    for (Index neighbor : indexer_.GetNeighbors(i)) {
+      if (cells_[neighbor] != UNKNOWN)
+        ++num_known_neighbors;
+    }
+
+    if (num_known_neighbors == 4) {
+      bestIndex = i;
+      break;
+    }
+    if (num_known_neighbors > max_num_known_neighbors) {
+      max_num_known_neighbors = num_known_neighbors;
+      bestIndex = i;
+    }
+  }
+  return {bestIndex, BLACK};
 }
 
