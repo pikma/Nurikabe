@@ -10,14 +10,14 @@ DEPS=$(patsubst %.cc,%.d,$(SRCS))
 
 all: main
 
-LDFLAGS=-lglog
+CFLAGS=-Wall -std=c++11 -O2
+#  CFLAGS=-Wall -std=c++11 -g   # debug
+#  CFLAGS=-Wall -std=c++11 -pg  # profile
+
+LDFLAGS=-static -lglog -lpthread
 
 main: $(OBJS)
-	$(CC) -o main $^ $(LDFLAGS)
-
-CFLAGS=-Wall -std=c++11 -O2
-#  CFLAGS=-Wall -std=c++11 -pg  # profile
-#  CFLAGS=-Wall -std=c++11 -g   # debug
+	$(CC) -o main $^ $(CFLAGS) $(LDFLAGS)
 
 $(OBJS): %.o: %.cc
 	$(CC) -c -MMD -MP $(CFLAGS) $< -o $@

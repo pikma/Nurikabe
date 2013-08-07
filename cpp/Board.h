@@ -1,11 +1,13 @@
+#include <iostream>
 #include <map>
 #include <stack>
+#include <string>
 #include <utility>
 #include <vector>
 
 typedef int Index;
 
-enum Color {
+enum class Color {
   BLACK,
   WHITE,
   UNKNOWN,
@@ -29,8 +31,10 @@ class Indexer {
   std::vector<Index> GetNeighbors(Index i) const;
   std::vector<std::pair<int, int>> GetNeighbors(int x, int y) const;
 
-  int GetManhattanDistance(Index i, Index j) const;
+  int ManhattanDistance(Index i, Index j) const;
 
+  std::string DebugIndex(Index i) const;
+  std::string DebugMove(const Move& move) const;
  private:
   const int width_;
 };
@@ -79,20 +83,23 @@ class Board {
  public:
   Board(int width,
         const std::map<std::pair<int, int>, int>& pos_to_numbers);
-
-  void ApplyMove(const Move& move);
-  void UndoMove(const Move& move);
-
-  // Returns false if there is no solution, in which case the state is
-  // unchanged. Returns true if a solution is found or if one cannot progress
-  // without a guess. In this case, applied_moves is filled with the moves
-  // applied to the state.
-  bool SolveWithoutGuess(std::stack<Move>* applied_moves);
+  Board(Board&&) = default;
 
   bool Solve();
-  bool SolveWithGuess(const Move& move);
+
+  std::string ToString(bool debug = false) const;
 
  private:
+  // Returns false if the move is invalid.
+  bool ApplyMove(const Move& move);
+  void ApplyMoveOrDie(const Move& move);
+  void UndoMove(const Move& move);
+
+  bool Backtrack();
+  void Progress(std::stack<Move>* applied_moves, int max_lookahead);
+  bool BacktrackWithMove(const Move& move);
+  void ProgressTrivialBlacks();
+
   // When making a move at position p, it makes the states invalid iff it
   // breaks any of the conditions below, depending on its color.
   //
@@ -118,12 +125,14 @@ class Board {
 
   // Returns the cells reachable from the origin by traversing only cells that
   // are not of the barrier color.
-  std::vector<bool> ReachableCellsNotColored(
-      Index origin, Color barrier) const;
+  int ReachableCellsNotColored(
+      Index origin, Color barrier, std::vector<bool>* reachable) const;
 
   // Same as above, but stops as soon as it find max_num_cells reachable cells.
-  std::vector<bool> ReachableCellsNotColoredAtMost(
-      Index origin, Color barrier, int max_num_cells) const;
+  int ReachableCellsNotColoredAtMost(Index origin,
+                                     Color barrier,
+                                     int max_num_cells,
+                                     std::vector<bool>* reachable) const;
 
   // Marks the origin as reachable, and propagates to its neighbors. Returns
   // the number of cells newly marked as reachable.
@@ -132,12 +141,17 @@ class Board {
                        int max_num_cells,
                        std::vector<bool>* reachable) const;
 
-  bool IsMoveValid(const Move& move) const;
+  bool HasMoveNoSolution(const Move& move, int num_moves_horizon) const;
+  bool HasNoSolution(const Move& previous_move, int num_moves_horizon) const;
 
   const int width_;
   const int num_cells_;
   const Indexer indexer_;
   std::vector<Color> cells_;
   IslandSet islands_;
-  bool is_valid_;
+
+  Board(const Board&);
+  const Board& operator=(const Board&);
 };
+
+Board ParseBoardFromStream(std::istream* stream);
